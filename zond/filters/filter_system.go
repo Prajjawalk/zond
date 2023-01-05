@@ -1,15 +1,34 @@
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+
+// Package filters implements an zond filtering system for block,
+// transactions and log events.
 package filters
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/theQRL/zond"
 	"github.com/theQRL/zond/common"
 	"github.com/theQRL/zond/core"
 	"github.com/theQRL/zond/core/types"
 	"github.com/theQRL/zond/event"
 	"github.com/theQRL/zond/rpc"
-	"sync"
-	"time"
 )
 
 // Type determines the kind of filter and is used to put the filter in to
