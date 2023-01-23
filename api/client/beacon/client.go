@@ -28,13 +28,13 @@ import (
 )
 
 const (
-	getSignedBlockPath      = "/eth/v2/beacon/blocks"
-	getBlockRootPath        = "/eth/v1/beacon/blocks/{{.Id}}/root"
-	getForkForStatePath     = "/eth/v1/beacon/states/{{.Id}}/fork"
-	getWeakSubjectivityPath = "/eth/v1/beacon/weak_subjectivity"
-	getForkSchedulePath     = "/eth/v1/config/fork_schedule"
-	getStatePath            = "/eth/v2/debug/beacon/states"
-	getNodeVersionPath      = "/eth/v1/node/version"
+	getSignedBlockPath      = "/zond/v2/beacon/blocks"
+	getBlockRootPath        = "/zond/v1/beacon/blocks/{{.Id}}/root"
+	getForkForStatePath     = "/zond/v1/beacon/states/{{.Id}}/fork"
+	getWeakSubjectivityPath = "/zond/v1/beacon/weak_subjectivity"
+	getForkSchedulePath     = "/zond/v1/config/fork_schedule"
+	getStatePath            = "/zond/v2/debug/beacon/states"
+	getNodeVersionPath      = "/zond/v1/node/version"
 )
 
 // StateOrBlockId represents the block_id / state_id parameters that several of the Eth Beacon API methods accept.

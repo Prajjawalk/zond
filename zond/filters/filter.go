@@ -30,11 +30,17 @@ import (
 
 type Backend interface {
 	//ChainDb() ethdb.Database
-	HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*protos.BlockHeader, error)
-	HeaderByHash(ctx context.Context, blockHash common.Hash) (*protos.BlockHeader, error)
-	GetReceipts(ctx context.Context, blockHash common.Hash, isProtocolTransaction bool) (types.Receipts, error)
-	GetLogs(ctx context.Context, blockHash common.Hash) ([][]*types.Log, error)
-	PendingBlockAndReceipts() (*protos.Block, types.Receipts)
+	HeaderByNumberV1(ctx context.Context, blockNr rpc.BlockNumber) (*protos.BlockHeader, error)
+	HeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error)
+	HeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Header, error)
+	HeaderByHashV1(ctx context.Context, blockHash common.Hash) (*protos.BlockHeader, error)
+	HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error)
+	GetReceiptsV1(ctx context.Context, blockHash common.Hash, isProtocolTransaction bool) (types.Receipts, error)
+	GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error)
+	GetLogsV1(ctx context.Context, blockHash common.Hash) ([][]*types.Log, error)
+	GetLogs(ctx context.Context, hash common.Hash, number uint64) ([][]*types.Log, error)
+	PendingBlockAndReceiptsV1() (*protos.Block, types.Receipts)
+	PendingBlockAndReceipts() (*types.Block, types.Receipts)
 
 	//SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
 	//SubscribeChainEvent(ch chan<- core.ChainEvent) event.Subscription
@@ -118,7 +124,7 @@ func newFilter(backend Backend, addresses []common.Address, topics [][]common.Ha
 func (f *Filter) Logs(ctx context.Context) ([]*types.Log, error) {
 	// If we're doing singleton block filtering, execute and return
 	if f.block != (common.Hash{}) {
-		header, err := f.backend.HeaderByHash(ctx, f.block)
+		header, err := f.backend.HeaderByHashV1(ctx, f.block)
 		if err != nil {
 			return nil, err
 		}
@@ -261,7 +267,7 @@ func (f *Filter) blockLogs(ctx context.Context, header *protos.BlockHeader) (log
 // match the filter criteria. This function is called when the bloom filter signals a potential match.
 func (f *Filter) checkMatches(ctx context.Context, header *protos.BlockHeader) (logs []*types.Log, err error) {
 	// Get the logs of the block
-	logsList, err := f.backend.GetLogs(ctx, common.BytesToHash(header.Hash))
+	logsList, err := f.backend.GetLogsV1(ctx, common.BytesToHash(header.Hash))
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +279,7 @@ func (f *Filter) checkMatches(ctx context.Context, header *protos.BlockHeader) (
 	if len(logs) > 0 {
 		// We have matching logs, check if we need to resolve full logs via the light client
 		if logs[0].TxHash == (common.Hash{}) {
-			receipts, err := f.backend.GetReceipts(ctx, common.BytesToHash(header.Hash), false)
+			receipts, err := f.backend.GetReceiptsV1(ctx, common.BytesToHash(header.Hash), false)
 			if err != nil {
 				return nil, err
 			}
@@ -290,7 +296,7 @@ func (f *Filter) checkMatches(ctx context.Context, header *protos.BlockHeader) (
 
 // pendingLogs returns the logs matching the filter criteria within the pending block.
 func (f *Filter) pendingLogs() ([]*types.Log, error) {
-	block, receipts := f.backend.PendingBlockAndReceipts()
+	block, receipts := f.backend.PendingBlockAndReceiptsV1()
 	if bloomFilter(types.BytesToBloom(block.Header.TxBloom), f.addresses, f.topics) {
 		var unfiltered []*types.Log
 		for _, r := range receipts {

@@ -26,6 +26,7 @@ import (
 	"github.com/theQRL/zond/config"
 	"github.com/theQRL/zond/consensus"
 	"github.com/theQRL/zond/core"
+	"github.com/theQRL/zond/core/rawdb"
 	"github.com/theQRL/zond/core/state"
 	"github.com/theQRL/zond/core/types"
 	"github.com/theQRL/zond/core/vm"
@@ -64,12 +65,12 @@ func (b *ZondAPIBackend) GetValidators(ctx context.Context) (*metadata.EpochMeta
 	return b.zond.blockchainV1.GetValidators()
 }
 
-func (b *ZondAPIBackend) HeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*protos.BlockHeader, error) {
+func (b *ZondAPIBackend) HeaderByNumberV1(ctx context.Context, number rpc.BlockNumber) (*protos.BlockHeader, error) {
 	// Pending block is only known by the miner
-	//if number == rpc.PendingBlockNumber {
-	//	block := b.zond.miner.PendingBlock()
-	//	return block.Header(), nil
-	//}
+	// if number == rpc.PendingBlockNumber {
+	// 	block := b.zond.miner.PendingBlock()
+	// 	return block.Header(), nil
+	// }
 	// Otherwise resolve and return the block
 	if number == rpc.LatestBlockNumber {
 		return b.zond.blockchainV1.CurrentBlock().Header().PBData(), nil
@@ -81,24 +82,51 @@ func (b *ZondAPIBackend) HeaderByNumber(ctx context.Context, number rpc.BlockNum
 	return block.Header().PBData(), nil
 }
 
-//func (b *ZondAPIBackend) HeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Header, error) {
-//	if blockNr, ok := blockNrOrHash.Number(); ok {
-//		return b.HeaderByNumber(ctx, blockNr)
-//	}
-//	if hash, ok := blockNrOrHash.Hash(); ok {
-//		header := b.zond.blockchain.GetHeaderByHash(hash)
-//		if header == nil {
-//			return nil, errors.New("header for hash not found")
-//		}
-//		if blockNrOrHash.RequireCanonical && b.zond.blockchain.GetCanonicalHash(header.Number.Uint64()) != hash {
-//			return nil, errors.New("hash is not currently canonical")
-//		}
-//		return header, nil
-//	}
-//	return nil, errors.New("invalid arguments; neither block nor hash specified")
-//}
+func (b *ZondAPIBackend) HeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error) {
+	// Pending block is only known by the miner
+	if number == rpc.PendingBlockNumber {
+		block := b.zond.miner.PendingBlock()
+		return block.Header(), nil
+	}
+	// Otherwise resolve and return the block
+	if number == rpc.LatestBlockNumber {
+		return b.zond.blockchain.CurrentBlock().Header(), nil
+	}
+	if number == rpc.FinalizedBlockNumber {
+		block := b.zond.blockchain.CurrentFinalizedBlock()
+		if block != nil {
+			return block.Header(), nil
+		}
+		return nil, errors.New("finalized block not found")
+	}
+	if number == rpc.SafeBlockNumber {
+		block := b.zond.blockchain.CurrentSafeBlock()
+		if block != nil {
+			return block.Header(), nil
+		}
+		return nil, errors.New("safe block not found")
+	}
+	return b.zond.blockchain.GetHeaderByNumber(uint64(number)), nil
+}
 
-func (b *ZondAPIBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*protos.BlockHeader, error) {
+func (b *ZondAPIBackend) HeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Header, error) {
+	if blockNr, ok := blockNrOrHash.Number(); ok {
+		return b.HeaderByNumber(ctx, blockNr)
+	}
+	if hash, ok := blockNrOrHash.Hash(); ok {
+		header := b.zond.blockchain.GetHeaderByHash(hash)
+		if header == nil {
+			return nil, errors.New("header for hash not found")
+		}
+		if blockNrOrHash.RequireCanonical && b.zond.blockchain.GetCanonicalHash(header.Number.Uint64()) != hash {
+			return nil, errors.New("hash is not currently canonical")
+		}
+		return header, nil
+	}
+	return nil, errors.New("invalid arguments; neither block nor hash specified")
+}
+
+func (b *ZondAPIBackend) HeaderByHashV1(ctx context.Context, hash common.Hash) (*protos.BlockHeader, error) {
 	//return b.zond.blockchain.GetHeaderByHash(hash), nil
 	block, err := b.zond.blockchainV1.GetBlock(hash)
 	if err != nil {
@@ -107,7 +135,11 @@ func (b *ZondAPIBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*p
 	return block.Header().PBData(), nil
 }
 
-func (b *ZondAPIBackend) BlockByNumber(ctx context.Context, number rpc.BlockNumber) (*protos.Block, error) {
+func (b *ZondAPIBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
+	return b.zond.blockchain.GetHeaderByHash(hash), nil
+}
+
+func (b *ZondAPIBackend) BlockByNumberV1(ctx context.Context, number rpc.BlockNumber) (*protos.Block, error) {
 	// Pending block is only known by the miner
 	if number == rpc.PendingBlockNumber {
 		block := b.zond.pos.PendingBlock()
@@ -130,7 +162,26 @@ func (b *ZondAPIBackend) BlockByNumber(ctx context.Context, number rpc.BlockNumb
 	return block.PBData(), nil
 }
 
-func (b *ZondAPIBackend) BlockByHash(ctx context.Context, hash common.Hash) (*protos.Block, error) {
+func (b *ZondAPIBackend) BlockByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Block, error) {
+	// Pending block is only known by the miner
+	if number == rpc.PendingBlockNumber {
+		block := b.zond.miner.PendingBlock()
+		return block, nil
+	}
+	// Otherwise resolve and return the block
+	if number == rpc.LatestBlockNumber {
+		return b.zond.blockchain.CurrentBlock(), nil
+	}
+	if number == rpc.FinalizedBlockNumber {
+		return b.zond.blockchain.CurrentFinalizedBlock(), nil
+	}
+	if number == rpc.SafeBlockNumber {
+		return b.zond.blockchain.CurrentSafeBlock(), nil
+	}
+	return b.zond.blockchain.GetBlockByNumber(uint64(number)), nil
+}
+
+func (b *ZondAPIBackend) BlockByHashV1(ctx context.Context, hash common.Hash) (*protos.Block, error) {
 	block, err := b.zond.blockchainV1.GetBlock(hash)
 	if err != nil {
 		return nil, err
@@ -141,9 +192,13 @@ func (b *ZondAPIBackend) BlockByHash(ctx context.Context, hash common.Hash) (*pr
 	return block.PBData(), nil
 }
 
-func (b *ZondAPIBackend) BlockByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*protos.Block, error) {
+func (b *ZondAPIBackend) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
+	return b.zond.blockchain.GetBlockByHash(hash), nil
+}
+
+func (b *ZondAPIBackend) BlockByNumberOrHashV1(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*protos.Block, error) {
 	if blockNr, ok := blockNrOrHash.Number(); ok {
-		return b.BlockByNumber(ctx, blockNr)
+		return b.BlockByNumberV1(ctx, blockNr)
 	}
 	if hash, ok := blockNrOrHash.Hash(); ok {
 		block, err := b.zond.blockchainV1.GetBlock(hash)
@@ -158,12 +213,37 @@ func (b *ZondAPIBackend) BlockByNumberOrHash(ctx context.Context, blockNrOrHash 
 	return nil, errors.New("invalid arguments; neither block nor hash specified")
 }
 
-func (b *ZondAPIBackend) PendingBlockAndReceipts() (*protos.Block, types.Receipts) {
+func (b *ZondAPIBackend) BlockByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Block, error) {
+	if blockNr, ok := blockNrOrHash.Number(); ok {
+		return b.BlockByNumber(ctx, blockNr)
+	}
+	if hash, ok := blockNrOrHash.Hash(); ok {
+		header := b.zond.blockchain.GetHeaderByHash(hash)
+		if header == nil {
+			return nil, errors.New("header for hash not found")
+		}
+		if blockNrOrHash.RequireCanonical && b.zond.blockchain.GetCanonicalHash(header.Number.Uint64()) != hash {
+			return nil, errors.New("hash is not currently canonical")
+		}
+		block := b.zond.blockchain.GetBlock(hash, header.Number.Uint64())
+		if block == nil {
+			return nil, errors.New("header found, but block body is missing")
+		}
+		return block, nil
+	}
+	return nil, errors.New("invalid arguments; neither block nor hash specified")
+}
+
+func (b *ZondAPIBackend) PendingBlockAndReceiptsV1() (*protos.Block, types.Receipts) {
 	//return b.zond.miner.PendingBlockAndReceipts()
 	return nil, nil
 }
 
-func (b *ZondAPIBackend) StateAndHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*state.StateDB, *protos.BlockHeader, error) {
+func (b *ZondAPIBackend) PendingBlockAndReceipts() (*types.Block, types.Receipts) {
+	return b.zond.miner.PendingBlockAndReceipts()
+}
+
+func (b *ZondAPIBackend) StateAndHeaderByNumberV1(ctx context.Context, number rpc.BlockNumber) (*state.StateDB, *protos.BlockHeader, error) {
 	// Pending state is only known by the miner
 	//if number == rpc.PendingBlockNumber {
 	//	block, state := b.zond.miner.Pending()
@@ -189,9 +269,27 @@ func (b *ZondAPIBackend) StateAndHeaderByNumber(ctx context.Context, number rpc.
 	return stateDb, block.Header().PBData(), err
 }
 
-func (b *ZondAPIBackend) StateAndHeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*state.StateDB, *protos.BlockHeader, error) {
+func (b *ZondAPIBackend) StateAndHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
+	// Pending state is only known by the miner
+	if number == rpc.PendingBlockNumber {
+		block, state := b.zond.miner.Pending()
+		return state, block.Header(), nil
+	}
+	// Otherwise resolve the block number and return its state
+	header, err := b.HeaderByNumber(ctx, number)
+	if err != nil {
+		return nil, nil, err
+	}
+	if header == nil {
+		return nil, nil, errors.New("header not found")
+	}
+	stateDb, err := b.zond.BlockChain().StateAt(header.Root)
+	return stateDb, header, err
+}
+
+func (b *ZondAPIBackend) StateAndHeaderByNumberOrHashV1(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*state.StateDB, *protos.BlockHeader, error) {
 	if blockNr, ok := blockNrOrHash.Number(); ok {
-		return b.StateAndHeaderByNumber(ctx, blockNr)
+		return b.StateAndHeaderByNumberV1(ctx, blockNr)
 	}
 	if hash, ok := blockNrOrHash.Hash(); ok {
 		block, err := b.zond.BlockChainV1().GetBlock(hash)
@@ -216,13 +314,43 @@ func (b *ZondAPIBackend) StateAndHeaderByNumberOrHash(ctx context.Context, block
 	return nil, nil, errors.New("invalid arguments; neither block nor hash specified")
 }
 
-func (b *ZondAPIBackend) GetReceipts(ctx context.Context, hash common.Hash, isProtocolTransaction bool) (types.Receipts, error) {
+func (b *ZondAPIBackend) StateAndHeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*state.StateDB, *types.Header, error) {
+	if blockNr, ok := blockNrOrHash.Number(); ok {
+		return b.StateAndHeaderByNumber(ctx, blockNr)
+	}
+	if hash, ok := blockNrOrHash.Hash(); ok {
+		header, err := b.HeaderByHash(ctx, hash)
+		if err != nil {
+			return nil, nil, err
+		}
+		if header == nil {
+			return nil, nil, errors.New("header for hash not found")
+		}
+		// TODO (cyyber): This needs to be implemented and require some design changes
+		//if blockNrOrHash.RequireCanonical && b.zond.blockchain.GetCanonicalHash(header.Number.Uint64()) != hash {
+		//	return nil, nil, errors.New("hash is not currently canonical")
+		//}
+		stateDb, err := b.zond.BlockChain().StateAt(header.Root)
+		return stateDb, header, err
+	}
+	return nil, nil, errors.New("invalid arguments; neither block nor hash specified")
+}
+
+func (b *ZondAPIBackend) GetReceiptsV1(ctx context.Context, hash common.Hash, isProtocolTransaction bool) (types.Receipts, error) {
 	//return b.zond.blockchain.GetReceiptsByHash(hash), nil
 	return b.zond.blockchainV1.GetReceiptsByHash(hash, isProtocolTransaction), nil
 }
 
-func (b *ZondAPIBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {
+func (b *ZondAPIBackend) GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error) {
+	return b.zond.blockchain.GetReceiptsByHash(hash), nil
+}
+
+func (b *ZondAPIBackend) GetLogsV1(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {
 	return b.zond.blockchainV1.GetLogsByHash(hash)
+}
+
+func (b *ZondAPIBackend) GetLogs(ctx context.Context, hash common.Hash, number uint64) ([][]*types.Log, error) {
+	return rawdb.ReadLogs(b.zond.chainDb, hash, number, b.ChainConfig()), nil
 }
 
 //func (b *ZondAPIBackend) GetTd(ctx context.Context, hash common.Hash) *big.Int {
@@ -232,7 +360,7 @@ func (b *ZondAPIBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*ty
 //	return nil
 //}
 
-func (b *ZondAPIBackend) GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *protos.BlockHeader, vmConfig *vm.Config) (*vm.EVM, func() error, error) {
+func (b *ZondAPIBackend) GetEVMV1(ctx context.Context, msg core.Message, state *state.StateDB, header *protos.BlockHeader, vmConfig *vm.Config) (*vm.EVM, func() error, error) {
 	vmError := func() error { return nil }
 	if vmConfig == nil {
 		vmConfig = b.zond.blockchain.GetVMConfig()
@@ -248,6 +376,15 @@ func (b *ZondAPIBackend) GetEVM(ctx context.Context, msg core.Message, state *st
 	context := core.NewEVMBlockContextV1(block.HeaderFromPBData(header), nil, &author)
 
 	return vm.NewEVM(context, txContext, state, b.zond.blockchain.Config(), *vmConfig), vmError, nil
+}
+
+func (b *ZondAPIBackend) GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmConfig *vm.Config) (*vm.EVM, func() error, error) {
+	if vmConfig == nil {
+		vmConfig = b.zond.blockchain.GetVMConfig()
+	}
+	txContext := core.NewEVMTxContext(msg)
+	context := core.NewEVMBlockContext(header, b.zond.BlockChain(), nil)
+	return vm.NewEVM(context, txContext, state, b.zond.blockchain.Config(), *vmConfig), state.Error, nil
 }
 
 //func (b *ZondAPIBackend) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription {
@@ -274,7 +411,7 @@ func (b *ZondAPIBackend) GetEVM(ctx context.Context, msg core.Message, state *st
 //	return b.zond.BlockChain().SubscribeLogsEvent(ch)
 //}
 
-func (b *ZondAPIBackend) SendTx(ctx context.Context, signedTx transactions.TransactionInterface) error {
+func (b *ZondAPIBackend) SendTxV1(ctx context.Context, signedTx transactions.TransactionInterface) error {
 	if err := b.zond.blockchainV1.ValidateTransaction(signedTx.PBData()); err != nil {
 		return err
 	}
@@ -282,29 +419,42 @@ func (b *ZondAPIBackend) SendTx(ctx context.Context, signedTx transactions.Trans
 		b.ntp.Time())
 }
 
-//func (b *ZondAPIBackend) GetPoolTransactions() (types.Transactions, error) {
-//	pending := b.zond.txPool.Pending(false)
-//	var txs types.Transactions
-//	for _, batch := range pending {
-//		txs = append(txs, batch...)
-//	}
-//	return txs, nil
-//}
-//
-//func (b *ZondAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction {
-//	return b.zond.txPool.Get(hash)
-//}
+func (b *ZondAPIBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
+	return b.zond.txPool.AddLocal(signedTx)
+}
 
-func (b *ZondAPIBackend) GetTransaction(ctx context.Context, txHash common.Hash) (*protos.Transaction, common.Hash, uint64, uint64, error) {
+func (b *ZondAPIBackend) GetPoolTransactions() (types.Transactions, error) {
+	pending := b.zond.txPool.Pending(false)
+	var txs types.Transactions
+	for _, batch := range pending {
+		txs = append(txs, batch...)
+	}
+	return txs, nil
+}
+
+func (b *ZondAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction {
+	return b.zond.txPool.Get(hash)
+}
+
+func (b *ZondAPIBackend) GetTransactionV1(ctx context.Context, txHash common.Hash) (*protos.Transaction, common.Hash, uint64, uint64, error) {
 	//tx, blockHash, blockNumber, index := rawdb.ReadTransaction(b.zond.ChainDb(), txHash)
 	//return tx, blockHash, blockNumber, index, nil
 	tx, blockHash, blockNumber, index := b.zond.BlockChainV1().GetTransactionMetaDataByHash(txHash)
 	return tx, blockHash, blockNumber, index, nil
 }
 
-func (b *ZondAPIBackend) GetPoolNonce(ctx context.Context, addr common.Address) (uint64, error) {
+func (b *ZondAPIBackend) GetTransaction(ctx context.Context, txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, error) {
+	tx, blockHash, blockNumber, index := rawdb.ReadTransaction(b.zond.ChainDb(), txHash)
+	return tx, blockHash, blockNumber, index, nil
+}
+
+func (b *ZondAPIBackend) GetPoolNonceV1(ctx context.Context, addr common.Address) (uint64, error) {
 	//return b.zond.txPool.Nonce(addr), nil
 	return b.zond.blockchainV1.GetNonce(addr)
+}
+
+func (b *ZondAPIBackend) GetPoolNonce(ctx context.Context, addr common.Address) (uint64, error) {
+	return b.zond.txPool.Nonce(addr), nil
 }
 
 //func (b *ZondAPIBackend) Stats() (pending int, queued int) {

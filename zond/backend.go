@@ -24,6 +24,7 @@ import (
 	"github.com/theQRL/zond/consensus"
 	"github.com/theQRL/zond/consensus_old"
 	"github.com/theQRL/zond/core"
+	"github.com/theQRL/zond/core/txpool"
 	"github.com/theQRL/zond/core/vm"
 	"github.com/theQRL/zond/ethdb"
 	"github.com/theQRL/zond/internal/zondapi"
@@ -43,6 +44,7 @@ type Zond struct {
 	APIBackend   *ZondAPIBackend
 	handler      *handler
 	miner        *miner.Miner
+	txPool       *txpool.TxPool
 
 	// DB interfaces
 	chainDb ethdb.Database // Block chain database
@@ -99,28 +101,7 @@ func NewV1(stack *node.Node, pos *consensus_old.POS) (*Zond, error) {
 		stack.Config().AllowUnprotectedTxs, z, ntp.GetNTP()}
 	stack.RegisterAPIs(z.APIs())
 	config := zondconfig.Defaults
-	// Assemble the Ethereum object
-	chainDb, err := stack.OpenDatabaseWithFreezer("chaindata", config.DatabaseCache, config.DatabaseHandles, config.DatabaseFreezer, "zond/db/chaindata/", false)
-	if err != nil {
-		return nil, err
-	}
 
-	var (
-		vmConfig = vm.Config{
-			EnablePreimageRecording: config.EnablePreimageRecording,
-		}
-		cacheConfig = &core.CacheConfig{
-			TrieCleanLimit:      config.TrieCleanCache,
-			TrieCleanJournal:    stack.ResolvePath(config.TrieCleanCacheJournal),
-			TrieCleanRejournal:  config.TrieCleanCacheRejournal,
-			TrieCleanNoPrefetch: config.NoPrefetch,
-			TrieDirtyLimit:      config.TrieDirtyCache,
-			TrieDirtyDisabled:   config.NoPruning,
-			TrieTimeLimit:       config.TrieTimeout,
-			SnapshotLimit:       config.SnapshotCache,
-			Preimages:           config.Preimages,
-		}
-	)
 	// Override the chain config with provided settings.
 	var overrides core.ChainOverrides
 	if config.OverrideTerminalTotalDifficulty != nil {
@@ -129,10 +110,7 @@ func NewV1(stack *node.Node, pos *consensus_old.POS) (*Zond, error) {
 	if config.OverrideTerminalTotalDifficultyPassed != nil {
 		overrides.OverrideTerminalTotalDifficultyPassed = config.OverrideTerminalTotalDifficultyPassed
 	}
-	z.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, config.Genesis, &overrides, z.engine, vmConfig, &config.TxLookupLimit)
-	if err != nil {
-		return nil, err
-	}
+
 	//z.shutdownTracker.MarkStartup()
 	return z, nil
 }
@@ -180,6 +158,7 @@ func New(stack *node.Node) (*Zond, error) {
 	if err != nil {
 		return nil, err
 	}
+	z.txPool = txpool.NewTxPool(config.TxPool, z.blockchain.Config(), z.blockchain)
 	//z.shutdownTracker.MarkStartup()
 	return z, nil
 }

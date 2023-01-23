@@ -52,29 +52,40 @@ type Backend interface {
 	// Blockchain API
 	//SetHead(number uint64)
 	GetValidators(ctx context.Context) (*metadata.EpochMetaData, error)
-	HeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*protos.BlockHeader, error)
-	HeaderByHash(ctx context.Context, hash common.Hash) (*protos.BlockHeader, error)
-	//HeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Header, error)
+	HeaderByNumberV1(ctx context.Context, number rpc.BlockNumber) (*protos.BlockHeader, error)
+	HeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error)
+	HeaderByHashV1(ctx context.Context, hash common.Hash) (*protos.BlockHeader, error)
+	HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error)
+	HeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Header, error)
 	//CurrentHeader() *types.Header
 	//CurrentBlock() *types.Block
-	BlockByNumber(ctx context.Context, number rpc.BlockNumber) (*protos.Block, error)
-	BlockByHash(ctx context.Context, hash common.Hash) (*protos.Block, error)
-	BlockByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*protos.Block, error)
-	//StateAndHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*state.StateDB, *types.Header, error)
-	StateAndHeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*state.StateDB, *protos.BlockHeader, error)
-	//PendingBlockAndReceipts() (*types.Block, types.Receipts)
-	GetReceipts(ctx context.Context, hash common.Hash, isProtocolTransaction bool) (types.Receipts, error)
+	BlockByNumberV1(ctx context.Context, number rpc.BlockNumber) (*protos.Block, error)
+	BlockByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Block, error)
+	BlockByHashV1(ctx context.Context, hash common.Hash) (*protos.Block, error)
+	BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error)
+	BlockByNumberOrHashV1(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*protos.Block, error)
+	BlockByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Block, error)
+	StateAndHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*state.StateDB, *types.Header, error)
+	StateAndHeaderByNumberOrHashV1(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*state.StateDB, *protos.BlockHeader, error)
+	StateAndHeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*state.StateDB, *types.Header, error)
+	PendingBlockAndReceipts() (*types.Block, types.Receipts)
+	GetReceiptsV1(ctx context.Context, hash common.Hash, isProtocolTransaction bool) (types.Receipts, error)
+	GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error)
 	//GetTd(ctx context.Context, hash common.Hash) *big.Int
-	GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *protos.BlockHeader, vmConfig *vm.Config) (*vm.EVM, func() error, error)
+	GetEVMV1(ctx context.Context, msg core.Message, state *state.StateDB, header *protos.BlockHeader, vmConfig *vm.Config) (*vm.EVM, func() error, error)
+	GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmConfig *vm.Config) (*vm.EVM, func() error, error)
 	//SubscribeChainEvent(ch chan<- core.ChainEvent) event.Subscription
 	//SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription
 	//SubscribeChainSideEvent(ch chan<- core.ChainSideEvent) event.Subscription
 
 	// Transaction pool API
-	SendTx(ctx context.Context, signedTx transactions.TransactionInterface) error
-	GetTransaction(ctx context.Context, txHash common.Hash) (*protos.Transaction, common.Hash, uint64, uint64, error)
-	//GetPoolTransactions() (types.Transactions, error)
-	//GetPoolTransaction(txHash common.Hash) *types.Transaction
+	SendTxV1(ctx context.Context, signedTx transactions.TransactionInterface) error
+	GetTransactionV1(ctx context.Context, txHash common.Hash) (*protos.Transaction, common.Hash, uint64, uint64, error)
+	GetTransaction(ctx context.Context, txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, error)
+	SendTx(ctx context.Context, signedTx *types.Transaction) error
+	GetPoolTransactions() (types.Transactions, error)
+	GetPoolTransaction(txHash common.Hash) *types.Transaction
+	GetPoolNonceV1(ctx context.Context, addr common.Address) (uint64, error)
 	GetPoolNonce(ctx context.Context, addr common.Address) (uint64, error)
 	//Stats() (pending int, queued int)
 	//TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
@@ -83,7 +94,8 @@ type Backend interface {
 
 	// Filter API
 	//BloomStatus() (uint64, uint64)
-	GetLogs(ctx context.Context, blockHash common.Hash) ([][]*types.Log, error)
+	GetLogsV1(ctx context.Context, blockHash common.Hash) ([][]*types.Log, error)
+	GetLogs(ctx context.Context, hash common.Hash, number uint64) ([][]*types.Log, error)
 	//ServiceFilter(ctx context.Context, session *bloombits.MatcherSession)
 	//SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription
 	//SubscribePendingLogsEvent(ch chan<- []*types.Log) event.Subscription

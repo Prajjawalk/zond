@@ -58,11 +58,11 @@ const (
 // BackendV1 interface provides the common API services (that are provided by
 // both full and light clients) with access to necessary functions.
 type BackendV1 interface {
-	HeaderByHash(ctx context.Context, hash common.Hash) (*protos.BlockHeader, error)
-	HeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*protos.BlockHeader, error)
-	BlockByHash(ctx context.Context, hash common.Hash) (*protos.Block, error)
-	BlockByNumber(ctx context.Context, number rpc.BlockNumber) (*protos.Block, error)
-	GetTransaction(ctx context.Context, txHash common.Hash) (*protos.Transaction, common.Hash, uint64, uint64, error)
+	HeaderByHashV1(ctx context.Context, hash common.Hash) (*protos.BlockHeader, error)
+	HeaderByNumberV1(ctx context.Context, number rpc.BlockNumber) (*protos.BlockHeader, error)
+	BlockByHashV1(ctx context.Context, hash common.Hash) (*protos.Block, error)
+	BlockByNumberV1(ctx context.Context, number rpc.BlockNumber) (*protos.Block, error)
+	GetTransactionV1(ctx context.Context, txHash common.Hash) (*protos.Transaction, common.Hash, uint64, uint64, error)
 	RPCGasCap() uint64
 	//ChainConfig() *params.ChainConfig
 	Engine() consensus.Engine
@@ -111,14 +111,14 @@ func (context *chainContext) Engine() consensus.Engine {
 }
 
 func (context *chainContext) GetHeader(hash common.Hash, number uint64) *protos.BlockHeader {
-	header, err := context.api.backend.HeaderByNumber(context.ctx, rpc.BlockNumber(number))
+	header, err := context.api.backend.HeaderByNumberV1(context.ctx, rpc.BlockNumber(number))
 	if err != nil {
 		return nil
 	}
 	// if header.Hash() == hash {
 	// 	return header
 	// }
-	header, err = context.api.backend.HeaderByHash(context.ctx, hash)
+	header, err = context.api.backend.HeaderByHashV1(context.ctx, hash)
 	if err != nil {
 		return nil
 	}
@@ -138,7 +138,7 @@ func (api *API) chainContext(ctx context.Context) core.ChainContextV1 {
 // blockByNumber is the wrapper of the chain access function offered by the backend.
 // It will return an error if the block is not found.
 func (api *API) blockByNumber(ctx context.Context, number rpc.BlockNumber) (*protos.Block, error) {
-	b, err := api.backend.BlockByNumber(ctx, number)
+	b, err := api.backend.BlockByNumberV1(ctx, number)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ func (api *API) blockByNumber(ctx context.Context, number rpc.BlockNumber) (*pro
 // blockByHash is the wrapper of the chain access function offered by the backend.
 // It will return an error if the block is not found.
 func (api *API) blockByHash(ctx context.Context, hash common.Hash) (*protos.Block, error) {
-	b, err := api.backend.BlockByHash(ctx, hash)
+	b, err := api.backend.BlockByHashV1(ctx, hash)
 	if err != nil {
 		return nil, err
 	}

@@ -26,6 +26,7 @@ import (
 	// "github.com/theQRL/zond/consensus/clique"
 	// "github.com/theQRL/zond/consensus/ethash"
 	"github.com/theQRL/zond/core"
+	"github.com/theQRL/zond/core/txpool"
 	"github.com/theQRL/zond/core/types"
 	"github.com/theQRL/zond/zond/downloader"
 
@@ -80,9 +81,9 @@ var Defaults = Config{
 	SnapshotCache:           102,
 	FilterLogCacheSize:      32,
 	Miner:                   miner.DefaultConfig,
-	// TxPool:                  txpool.DefaultConfig,
-	RPCGasCap:     50000000,
-	RPCEVMTimeout: 5 * time.Second,
+	TxPool:                  txpool.DefaultTxPoolConfig,
+	RPCGasCap:               50000000,
+	RPCEVMTimeout:           5 * time.Second,
 	// GPO:                     FullNodeGPO,
 	RPCTxFeeCap: 1, // 1 ether
 }
@@ -173,7 +174,7 @@ type Config struct {
 	// Ethash ethash.Config
 
 	// Transaction pool options
-	// TxPool txpool.Config
+	TxPool txpool.TxPoolConfig
 
 	// Gas Price Oracle options
 	// GPO gasprice.Config
